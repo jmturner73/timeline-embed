@@ -1,19 +1,10 @@
-<script type="module" src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
-
-<tableau-viz
-  id="tableauViz"
-  src="https://public.tableau.com/views/timelineTrifecta/Dashboard16"
-  toolbar="bottom"
-  hide-tabs>
-</tableau-viz>
-
 <script>
-  // Notify parent (Wix) that iframe is ready
+  // Notify Wix that iframe is ready
   window.onload = () => {
     window.parent.postMessage('ready', 'https://www.the-big-green-machine.com');
   };
 
-  // Listen for filter message from Wix
+  // Listen for siteId from Wix
   window.addEventListener('message', async (event) => {
     const allowedOrigin = 'https://www.the-big-green-machine.com';
     if (event.origin !== allowedOrigin) return;
@@ -24,15 +15,17 @@
     try {
       await tableauViz.ready;
 
-      // Safely access workbook after it's ready
-      const workbook = await tableauViz.workbook;
-      const activeSheet = await workbook.activeSheet;
+      // ✅ Get the Viz API instance
+      const viz = await tableauViz.viz;
+
+      // ✅ Now workbook is accessible
+      const workbook = viz.workbook;
+      const activeSheet = workbook.activeSheet;
 
       let targetSheet = activeSheet;
-
       if (activeSheet.sheetType === 'dashboard') {
-        const sheets = await activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Update this name if necessary
+        const sheets = activeSheet.worksheets;
+        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Update if your worksheet name is different
       }
 
       if (targetSheet) {
