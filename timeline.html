@@ -1,114 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Tableau Timeline Embed with Filter & Messaging</title>
-  <style>
-    #timeline {
-      width: 950px;
-      height: 150px;
-      border: 1px solid #ccc;
+<script type="module" src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+
+<tableau-viz id="tableauViz"
+  src='https://public.tableau.com/views/timelineTrifecta/Dashboard16'
+  toolbar="bottom" hide-tabs>
+</tableau-viz>
+
+<script>
+  window.addEventListener('message', async (event) => {
+    const allowedOrigin = 'https://www.the-big-green-machine.com'; // Update if needed
+    if (event.origin !== allowedOrigin) return;
+
+    const siteId = event.data;
+    const tableauViz = document.getElementById('tableauViz');
+
+    try {
+      await tableauViz.ready; // Wait until viz is interactive
+      const workbook = await tableauViz.workbook;
+      const activeSheet = await workbook.activeSheet;
+
+      let targetSheet = activeSheet;
+      if (activeSheet.sheetType === 'dashboard') {
+        const sheets = await activeSheet.worksheets;
+        targetSheet = sheets.find(sheet => sheet.name === 'timeline');
+      }
+
+      if (targetSheet) {
+        await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
+        console.log('Filter applied for Site ID:', siteId);
+      }
+    } catch (err) {
+      console.error('Failed to apply filter:', err);
     }
-  </style>
-</head>
-<body>
-  <div id="timeline"></div>
-
-  <script type="module">
-    import { createViz, FilterUpdateType } from 'https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js';
-
-    let tableauViz;
-    let isVizReady = false;
-
-    async function createTableauViz() {
-      const container = document.getElementById('timeline');
-      const vizUrl = 'https://public.tableau.com/views/timelineTrifecta/Dashboard16';
-
-      try {
-        tableauViz = await createViz({
-          url: vizUrl,
-          container: container,
-          options: {
-            hideTabs: true,
-            width: '950px',
-            height: '150px',
-            onFirstInteractive: () => {
-              console.log('Tableau visualization is interactive.');
-              isVizReady = true;
-            }
-          }
-        });
-      } catch (error) {
-        console.error('Error creating Tableau viz:', error);
-      }
-    }
-
-    async function applyFilter(siteID) {
-      if (!isVizReady || !tableauViz) {
-        console.warn('Viz not ready for filtering');
-        return;
-      }
-
-      try {
-        const workbook = tableauViz.getWorkbook();
-        const activeSheet = workbook.getActiveSheet();
-
-        let targetSheet;
-
-        if (activeSheet.getSheetType() === 'dashboard') {
-          const worksheets = activeSheet.getWorksheets();
-          targetSheet = worksheets.find(sheet => sheet.getName() === 'timeline');
-        } else {
-          targetSheet = activeSheet;
-        }
-
-        if (targetSheet) {
-          await targetSheet.applyFilterAsync(
-            'siteID',
-            siteID,
-            FilterUpdateType.Replace
-          );
-          console.log(`Filter applied: siteID = ${siteID}`);
-        } else {
-          console.warn("Worksheet 'timeline' not found.");
-        }
-      } catch (err) {
-        console.error('Error applying filter:', err);
-      }
-    }
-
-    window.onmessage = (event) => {
-      console.log('Received message from:', event.origin);
-
-      // TODO: Adjust this to your trusted origin(s)
-      const trustedOrigin = 'https://www.the-big-green-machine.com';
-      if (event.origin !== trustedOrigin) {
-        console.warn('Untrusted origin:', event.origin);
-        return;
-      }
-
-      const siteid = event.data;
-      if (!siteid) {
-        console.warn('No siteid received in message');
-        return;
-      }
-
-      if (isVizReady) {
-        applyFilter(siteid);
-      } else {
-        console.log('Viz not ready, retrying filter in 500ms');
-        setTimeout(() => {
-          if (isVizReady) {
-            applyFilter(siteid);
-          } else {
-            console.warn('Still not ready on retry');
-          }
-        }, 500);
-      }
-    };
-
-    // Initialize on page load
-    createTableauViz();
-  </script>
-</body>
-</html>
+  });
+</script>
