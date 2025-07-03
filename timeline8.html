@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tableau Viz Web Component (v3)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Load Tableau Embedding API v3 -->
+  <script src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+
+  <style>
+    tableau-viz {
+      width: 950px;
+      height: 150px;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tableau v3 Web Component -->
+  <tableau-viz id="tableauViz"
+    src="https://public.tableau.com/views/timelineTrifecta/Dashboard16"
+    hide-tabs>
+  </tableau-viz>
+
+  <script>
+    const viz = document.getElementById('tableauViz');
+
+    // Apply filter once viz is loaded
+    viz.addEventListener('firstinteractive', async () => {
+      console.log("Viz is interactive.");
+
+      const siteID = extractSiteIdFromUrl();
+      if (siteID) {
+        try {
+          const workbook = await viz.workbook;
+          const activeSheet = await workbook.activeSheet;
+
+          let targetSheet;
+          if (activeSheet.sheetType === 'dashboard') {
+            const worksheets = await activeSheet.worksheets;
+            targetSheet = worksheets.find(ws => ws.name === 'timeline');
+          } else {
+            targetSheet = activeSheet;
+          }
+
+          if (targetSheet) {
+            await targetSheet.applyFilterAsync('Site ID', siteID, 'REPLACE');
+            console.log(`Filter applied: Site ID = ${siteID}`);
+          } else {
+            console.warn("Sheet named 'timeline' not found.");
+          }
+        } catch (err) {
+          console.error('Error applying filter:', err);
+        }
+      }
+    });
+
+    // Handle postMessage for siteID updates
+    window.addEventListener('message', async (event) => {
+      const allowedOrigin = 'https://www.the-big-green-machine.com';
+      if (event.origin !== allowedOrigin) return;
+
+      const siteID = event.data;
+      console.log("Received siteID from postMessage:", siteID);
+
+      if (siteID && viz) {
+        const workbook = await viz.workbook;
+        const activeSheet = await workbook.activeSheet;
+
+        let targetSheet;
+        if (activeSheet.sheetType === 'dashboard') {
+          const worksheets = await activeSheet.worksheets;
+          targetSheet = worksheets.find(ws => ws.name === 'timeline');
+        } else {
+          targetSheet = activeSheet;
+        }
+
+        if (targetSheet) {
+          await targetSheet.applyFilterAsync('Site ID', siteID, 'REPLACE');
+          console.log(`Filter applied via postMessage: Site ID = ${siteID}`);
+        }
+      }
+    });
+
+    function extractSiteIdFromUrl() {
+      const match = window.location.href.match(/\/(?:siteid|copy-of-siteid)\/([^/?#]+)/);
+      return match ? match[1] : null;
+    }
+  </script>
+</body>
+</html>
