@@ -7,13 +7,11 @@
   hide-tabs>
 </tableau-viz>
 
-
-
-
 <script>
   // Notify parent (Wix) that iframe is ready
   window.onload = () => {
-    window.parent.postMessage('ready', 'https://www.the-big-green-machine.com'); // your Wix domain
+    console.log('👋 Iframe ready, sending handshake to parent...');
+    window.parent.postMessage('ready', 'https://www.the-big-green-machine.com');
   };
 
   // Listen for filter message from Wix
@@ -32,7 +30,7 @@
       let targetSheet = activeSheet;
       if (activeSheet.sheetType === 'dashboard') {
         const sheets = activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // adjust if needed
+        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Update if needed
       }
 
       if (targetSheet) {
@@ -44,4 +42,3 @@
     }
   });
 </script>
-
