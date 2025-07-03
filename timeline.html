@@ -2,59 +2,68 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Timeline Embed</title>
-  <script type="module" src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+  <title>Tableau Viz with Filter</title>
+  <script src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
 </head>
 <body>
 
-  <!-- This is what actually loads the viz -->
+  <!-- Embed Tableau Viz -->
   <tableau-viz
     id="tableauViz"
-    src="https://public.tableau.com/views/timelineTrifecta/Dashboard16?:embed=y&:toolbar=bottom&:tabs=no"
-    toolbar="bottom"
-    hide-tabs
-    style="width:100%; height:100vh;">
-  </tableau-viz>
+    src="YOUR_TABLEAU_VIZ_URL_HERE"
+    style="width: 100%; height: 800px;"
+  ></tableau-viz>
 
   <script>
-    // Notify Wix that iframe is ready
-    window.onload = () => {
-      window.parent.postMessage('ready', 'https://www.the-big-green-machine.com');
-    };
+    // Helper: Extract siteId from URL path last segment
+    function getSiteIdFromUrl() {
+      const pathParts = window.location.pathname.split('/');
+      const lastPart = pathParts[pathParts.length - 1];
+      const siteId = parseInt(lastPart, 10);
+      if (isNaN(siteId)) {
+        console.warn('Site ID not found in URL path, defaulting to 33');
+        return 33;
+      }
+      return siteId;
+    }
 
-    // Listen for siteId from Wix
-    window.addEventListener('message', async (event) => {
-      const allowedOrigin = 'https://www.the-big-green-machine.com';
-      if (event.origin !== allowedOrigin) return;
+    const siteId = getSiteIdFromUrl();
+    console.log('Extracted Site ID:', siteId);
 
-      const { siteId } = event.data;
-      const tableauViz = document.getElementById('tableauViz');
+    const tableauViz = document.getElementById('tableauViz');
+
+    tableauViz.addEventListener('firstinteractive', async () => {
+      console.log('Tableau viz is interactive — ready to apply filters');
 
       try {
-        await tableauViz.ready;
-
-        // ✅ Get the Viz API instance
         const viz = await tableauViz.viz;
-
-        // ✅ Now workbook is accessible
         const workbook = viz.workbook;
         const activeSheet = workbook.activeSheet;
 
+        console.log('Active sheet name:', activeSheet.getName());
+        console.log('Active sheet type:', activeSheet.getSheetType());
+
         let targetSheet = activeSheet;
-        if (activeSheet.sheetType === 'dashboard') {
-          const sheets = activeSheet.worksheets;
-          targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Adjust if needed
+        if (activeSheet.getSheetType() === 'dashboard') {
+          const sheets = activeSheet.getWorksheets();
+          console.log('Worksheets in dashboard:', sheets.map(s => s.getName()));
+          targetSheet = sheets.find(sheet => sheet.getName().toLowerCase() === 'timeline');
+          if (!targetSheet) {
+            console.warn('Worksheet named "timeline" not found, using active sheet');
+            targetSheet = activeSheet;
+          }
         }
 
-        if (targetSheet) {
-          await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
-          console.log('✅ Filter applied for Site ID:', siteId);
-        } else {
-          console.warn('⚠️ Target sheet not found');
-        }
+        // Apply filter on the target sheet
+        await targetSheet.applyFilterAsync(
+          'Site ID',
+          siteId,
+          tableau.FilterUpdateType.REPLACE
+        );
+        console.log(`✅ Filter applied for Site ID: ${siteId}`);
 
       } catch (err) {
-        console.error('❌ Failed to apply filter:', err);
+        console.error('❌ Error applying filter:', err);
       }
     });
   </script>
