@@ -10,7 +10,6 @@
 <script>
   // Notify parent (Wix) that iframe is ready
   window.onload = () => {
-    console.log('👋 Iframe ready, sending handshake to parent...');
     window.parent.postMessage('ready', 'https://www.the-big-green-machine.com');
   };
 
@@ -24,19 +23,25 @@
 
     try {
       await tableauViz.ready;
-      const workbook = tableauViz.workbook;
-      const activeSheet = workbook.activeSheet;
+
+      // Safely access workbook after it's ready
+      const workbook = await tableauViz.workbook;
+      const activeSheet = await workbook.activeSheet;
 
       let targetSheet = activeSheet;
+
       if (activeSheet.sheetType === 'dashboard') {
-        const sheets = activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Update if needed
+        const sheets = await activeSheet.worksheets;
+        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Update this name if necessary
       }
 
       if (targetSheet) {
         await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
         console.log('✅ Filter applied for Site ID:', siteId);
+      } else {
+        console.warn('⚠️ Target sheet not found');
       }
+
     } catch (err) {
       console.error('❌ Failed to apply filter:', err);
     }
