@@ -10,31 +10,37 @@
 
 
 <script>
+  // Notify parent (Wix) that iframe is ready
+  window.onload = () => {
+    window.parent.postMessage('ready', 'https://www.the-big-green-machine.com'); // your Wix domain
+  };
+
+  // Listen for filter message from Wix
   window.addEventListener('message', async (event) => {
-    const allowedOrigin = 'https://www.the-big-green-machine.com'; // Your Wix site URL here
+    const allowedOrigin = 'https://www.the-big-green-machine.com';
+    if (event.origin !== allowedOrigin) return;
 
-    if (event.origin !== allowedOrigin) return; // Ignore messages from unknown sources
-
-    const siteId = event.data;
+    const { siteId } = event.data;
     const tableauViz = document.getElementById('tableauViz');
 
     try {
-      await tableauViz.ready; // Wait until viz is ready
+      await tableauViz.ready;
       const workbook = tableauViz.workbook;
       const activeSheet = workbook.activeSheet;
 
       let targetSheet = activeSheet;
       if (activeSheet.sheetType === 'dashboard') {
         const sheets = activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Replace 'timeline' with your worksheet name
+        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // adjust if needed
       }
 
       if (targetSheet) {
         await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
-        console.log('Filter applied for Site ID:', siteId);
+        console.log('✅ Filter applied for Site ID:', siteId);
       }
     } catch (err) {
-      console.error('Failed to apply filter:', err);
+      console.error('❌ Failed to apply filter:', err);
     }
   });
 </script>
+
