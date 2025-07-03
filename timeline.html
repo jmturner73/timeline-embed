@@ -11,21 +11,22 @@
 
 <script>
   window.addEventListener('message', async (event) => {
-    const allowedOrigin = 'https://www.the-big-green-machine.com'; // Update if needed
-    if (event.origin !== allowedOrigin) return;
+    const allowedOrigin = 'https://www.the-big-green-machine.com'; // Your Wix site URL here
+
+    if (event.origin !== allowedOrigin) return; // Ignore messages from unknown sources
 
     const siteId = event.data;
     const tableauViz = document.getElementById('tableauViz');
 
     try {
-      await tableauViz.ready; // Wait until viz is interactive
-      const workbook = await tableauViz.workbook;
-      const activeSheet = await workbook.activeSheet;
+      await tableauViz.ready; // Wait until viz is ready
+      const workbook = tableauViz.workbook;
+      const activeSheet = workbook.activeSheet;
 
       let targetSheet = activeSheet;
       if (activeSheet.sheetType === 'dashboard') {
-        const sheets = await activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline');
+        const sheets = activeSheet.worksheets;
+        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Replace 'timeline' with your worksheet name
       }
 
       if (targetSheet) {
