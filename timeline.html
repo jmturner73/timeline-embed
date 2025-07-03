@@ -1,42 +1,62 @@
-<script>
-  // Notify Wix that iframe is ready
-  window.onload = () => {
-    window.parent.postMessage('ready', 'https://www.the-big-green-machine.com');
-  };
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Timeline Embed</title>
+  <script type="module" src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+</head>
+<body>
 
-  // Listen for siteId from Wix
-  window.addEventListener('message', async (event) => {
-    const allowedOrigin = 'https://www.the-big-green-machine.com';
-    if (event.origin !== allowedOrigin) return;
+  <!-- This is what actually loads the viz -->
+  <tableau-viz
+    id="tableauViz"
+    src="https://public.tableau.com/views/timelineTrifecta/Dashboard16?:embed=y&:toolbar=bottom&:tabs=no"
+    toolbar="bottom"
+    hide-tabs
+    style="width:100%; height:100vh;">
+  </tableau-viz>
 
-    const { siteId } = event.data;
-    const tableauViz = document.getElementById('tableauViz');
+  <script>
+    // Notify Wix that iframe is ready
+    window.onload = () => {
+      window.parent.postMessage('ready', 'https://www.the-big-green-machine.com');
+    };
 
-    try {
-      await tableauViz.ready;
+    // Listen for siteId from Wix
+    window.addEventListener('message', async (event) => {
+      const allowedOrigin = 'https://www.the-big-green-machine.com';
+      if (event.origin !== allowedOrigin) return;
 
-      // ✅ Get the Viz API instance
-      const viz = await tableauViz.viz;
+      const { siteId } = event.data;
+      const tableauViz = document.getElementById('tableauViz');
 
-      // ✅ Now workbook is accessible
-      const workbook = viz.workbook;
-      const activeSheet = workbook.activeSheet;
+      try {
+        await tableauViz.ready;
 
-      let targetSheet = activeSheet;
-      if (activeSheet.sheetType === 'dashboard') {
-        const sheets = activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Update if your worksheet name is different
+        // ✅ Get the Viz API instance
+        const viz = await tableauViz.viz;
+
+        // ✅ Now workbook is accessible
+        const workbook = viz.workbook;
+        const activeSheet = workbook.activeSheet;
+
+        let targetSheet = activeSheet;
+        if (activeSheet.sheetType === 'dashboard') {
+          const sheets = activeSheet.worksheets;
+          targetSheet = sheets.find(sheet => sheet.name === 'timeline'); // Adjust if needed
+        }
+
+        if (targetSheet) {
+          await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
+          console.log('✅ Filter applied for Site ID:', siteId);
+        } else {
+          console.warn('⚠️ Target sheet not found');
+        }
+
+      } catch (err) {
+        console.error('❌ Failed to apply filter:', err);
       }
-
-      if (targetSheet) {
-        await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
-        console.log('✅ Filter applied for Site ID:', siteId);
-      } else {
-        console.warn('⚠️ Target sheet not found');
-      }
-
-    } catch (err) {
-      console.error('❌ Failed to apply filter:', err);
-    }
-  });
-</script>
+    });
+  </script>
+</body>
+</html>
