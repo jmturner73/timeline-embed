@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tableau Timeline Embed</title>
+  <style>
+    #timeline {
+      width: 950px;
+      height: 150px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div id="timeline"></div>
+
+  <script type="module">
+    import tableau from 'https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js';
+
+    const containerDiv = document.getElementById('timeline');
+    const vizUrl = 'https://public.tableau.com/views/timelineTrifecta/Dashboard16';
+
+    let viz;
+    let isVizReady = false;
+
+    function logMessage(message) {
+      console.log(message);
+    }
+
+    function createTableauViz() {
+      logMessage("Creating Tableau viz...");
+      const options = {
+        hideTabs: true,
+        width: "950px",
+        height: "150px",
+        onFirstInteractive: () => {
+          isVizReady = true;
+          logMessage("Tableau viz is interactive and ready.");
+        },
+        onError: (error) => {
+          console.error("Error creating Tableau viz:", error);
+        }
+      };
+
+      viz = new tableau.Viz(containerDiv, vizUrl, options);
+    }
+
+    async function applyFilter(siteID) {
+      if (!isVizReady) {
+        logMessage("Viz not ready yet. Will retry to apply filter shortly.");
+        setTimeout(() => applyFilter(siteID), 500);
+        return;
+      }
+
+      try {
+        const workbook = viz.getWorkbook();
+        const activeSheet = workbook.getActiveSheet();
+
+        let targetSheet;
+
+        if (activeSheet.getSheetType() === 'dashboard') {
+          const worksheets = activeSheet.getWorksheets();
+          targetSheet = worksheets.find(sheet => sheet.getName() === 'timeline');
+        } else {
+          targetSheet = activeSheet;
+        }
+
+        if (!targetSheet) {
+          logMessage("Worksheet 'timeline' not found.");
+          return;
+        }
+
+        await targetSheet.applyFilterAsync("siteID", siteID, tableau.FilterUpdateType.REPLACE);
+        logMessage(`Filter applied for siteID: ${siteID}`);
+      } catch (err) {
+        console.error("Error applying filter:", err);
+      }
+    }
+
+    // Listen for postMessage from parent window to receive siteID
+    window.addEventListener("message", (event) => {
+      // Adjust this to your trusted domain
+      const trustedOrigin = "https://www.the-big-green-machine.com";
+
+      logMessage(`Received message from origin: ${event.origin}`);
+
+      if (event.origin !== trustedOrigin) {
+        logMessage("Untrusted origin, ignoring message.");
+        return;
+      }
+
+      const siteID = event.data;
+      if (siteID) {
+        logMessage(`Received siteID: ${siteID}`);
+        applyFilter(siteID);
+      } else {
+        logMessage("No siteID found in message data.");
+      }
+    });
+
+    // Initialize viz on page load
+    window.onload = () => {
+      createTableauViz();
+    };
+  </script>
+</body>
+</html>
