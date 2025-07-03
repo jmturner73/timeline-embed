@@ -4,32 +4,3 @@
   src='https://public.tableau.com/views/timelineTrifecta/Dashboard16'
   toolbar="bottom" hide-tabs>
 </tableau-viz>
-
-<script>
-  window.addEventListener('message', async (event) => {
-    const allowedOrigin = 'https://www.the-big-green-machine.com'; // Update if needed
-    if (event.origin !== allowedOrigin) return;
-
-    const siteId = event.data;
-    const tableauViz = document.getElementById('tableauViz');
-
-    try {
-      await tableauViz.ready; // Wait until viz is interactive
-      const workbook = await tableauViz.workbook;
-      const activeSheet = await workbook.activeSheet;
-
-      let targetSheet = activeSheet;
-      if (activeSheet.sheetType === 'dashboard') {
-        const sheets = await activeSheet.worksheets;
-        targetSheet = sheets.find(sheet => sheet.name === 'timeline');
-      }
-
-      if (targetSheet) {
-        await targetSheet.applyFilterAsync('Site ID', siteId, 'replace');
-        console.log('Filter applied for Site ID:', siteId);
-      }
-    } catch (err) {
-      console.error('Failed to apply filter:', err);
-    }
-  });
-</script>
