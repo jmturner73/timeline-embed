@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Embedded Tableau Viz (v3)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Load Tableau Embedding API v3 -->
+  <script src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #f9f9f9;
+    }
+    tableau-viz {
+      width: 100%;
+      height: 100vh;
+      display: block;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Embed your Tableau dashboard -->
+  <tableau-viz id="tableauViz"
+    src="https://public.tableau.com/views/timelineTrifecta/Dashboard16"
+    toolbar="bottom"
+    hide-tabs>
+  </tableau-viz>
+
+  <script>
+    const vizElement = document.getElementById('tableauViz');
+
+    // Extract siteID from URL path
+    function getSiteIdFromUrl() {
+      const match = window.location.href.match(/\/(?:siteid|copy-of-siteid)\/([^/?#]+)/);
+      return match ? match[1] : null;
+    }
+
+    // Apply Tableau filter once viz is interactive
+    vizElement.addEventListener('firstinteractive', async () => {
+      console.log("Viz is interactive.");
+      const siteID = getSiteIdFromUrl();
+      if (siteID) {
+        await applyFilter(siteID);
+      }
+    });
+
+    // Listen for postMessage filter events
+    window.addEventListener('message', async (event) => {
+      const allowedOrigin = 'https://www.the-big-green-machine.com';
+      if (event.origin !== allowedOrigin) return;
+
+      const siteID = event.data;
+      if (siteID) {
+        await applyFilter(siteID);
+      }
+    });
+
+    // Function to apply the filter
+    async function applyFilter(siteID) {
+      try {
+        const workbook = await vizElement.workbook;
+        const activeSheet = await workbook.activeSheet;
+
+        let targetSheet = activeSheet;
+        if (activeSheet.sheetType === 'dashboard') {
+          const worksheets = await activeSheet.worksheets;
+          targetSheet = worksheets.find(ws => ws.name === 'timeline');
+        }
+
+        if (targetSheet) {
+          await targetSheet.applyFilterAsync('Site ID', siteID, 'REPLACE');
+          console.log(`Filter applied: Site ID = ${siteID}`);
+        } else {
+          console.warn("Target worksheet 'timeline' not found.");
+        }
+      } catch (error) {
+        console.error("Error applying filter:", error);
+      }
+    }
+  </script>
+
+</body>
+</html>
