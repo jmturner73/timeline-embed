@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tableau Timeline Embed</title>
+  <style>
+    #timeline {
+      width: 950px;
+      height: 150px;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div id="timeline"></div>
+
+  <script type="module">
+    import * as tableau from 'https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js';
+
+    const container = document.getElementById('timeline');
+    const vizUrl = "https://public.tableau.com/views/timelineTrifecta/Dashboard16";
+
+    let viz;
+
+    async function createTableauViz() {
+      try {
+        viz = tableau.createViz(container, vizUrl, {
+          hideTabs: true,
+          width: '950px',
+          height: '150px',
+          onFirstInteractive: () => {
+            console.log('Tableau viz is interactive and ready.');
+            // Optionally apply initial filter if siteid is extracted from URL
+            const siteid = extractSiteIdFromUrl();
+            if(siteid) {
+              applyFilter(siteid);
+            }
+          },
+          onError: (error) => {
+            console.error('Error loading Tableau viz:', error);
+          }
+        });
+      } catch (e) {
+        console.error('Failed to create Tableau viz:', e);
+      }
+    }
+
+    function extractSiteIdFromUrl() {
+      const url = window.location.href;
+      // Adjust this regex to your URL pattern if needed
+      const match = url.match(/\/(?:siteid|copy-of-siteid)\/([^\/?#]+)/);
+      if(match && match[1]) {
+        console.log('Extracted siteid from URL:', match[1]);
+        return match[1];
+      }
+      return null;
+    }
+
+    async function applyFilter(siteID) {
+      if (!viz) {
+        console.warn('Viz not initialized yet. Cannot apply filter.');
+        return;
+      }
+      try {
+        const workbook = viz.getWorkbook();
+        const activeSheet = workbook.getActiveSheet();
+
+        let targetSheet;
+        if (activeSheet.getSheetType() === 'dashboard') {
+          const worksheets = activeSheet.getWorksheets();
+          targetSheet = worksheets.find(sheet => sheet.getName() === 'timeline');
+        } else {
+          targetSheet = activeSheet;
+        }
+
+        if (targetSheet) {
+          await targetSheet.applyFilterAsync('Site ID', siteID, tableau.FilterUpdateType.REPLACE);
+          console.log(`Filter applied: Site ID = ${siteID}`);
+        } else {
+          console.warn("Worksheet 'timeline' not found in dashboard.");
+        }
+      } catch (err) {
+        console.error('Error applying filter:', err);
+      }
+    }
+
+    // Listen for postMessage events (e.g., from your Wix site)
+    window.addEventListener('message', (event) => {
+      // Validate origin
+      if (event.origin !== 'https://www.the-big-green-machine.com') {
+        console.warn('Ignored message from unknown origin:', event.origin);
+        return;
+      }
+      const siteidFromMessage = event.data;
+      if (siteidFromMessage) {
+        console.log('Received siteid from message:', siteidFromMessage);
+        applyFilter(siteidFromMessage);
+      }
+    });
+
+    // Initialize the viz on page load
+    window.onload = createTableauViz;
+  </script>
+</body>
+</html>
