@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tableau Viz Embed for Wix</title>
+  <style>
+    body, html {
+      margin: 0; padding: 0; 
+      width: 100%; height: 100%;
+    }
+    #timeline {
+      width: 950px;
+      height: 150px;
+    }
+  </style>
+  <!-- Load Tableau embedding API v3 as a global script -->
+  <script src="https://public.tableau.com/javascripts/api/tableau.embedding.3.latest.min.js"></script>
+</head>
+<body>
+
+  <div id="timeline"></div>
+
+  <script>
+    const container = document.getElementById('timeline');
+    const vizUrl = 'https://public.tableau.com/views/timelineTrifecta/Dashboard16';
+
+    let viz;
+
+    // Extract siteID from URL (example: yoursite.com/siteid/12345)
+    function extractSiteIdFromUrl() {
+      const match = window.location.href.match(/\/(?:siteid|copy-of-siteid)\/([^/?#]+)/);
+      return match ? match[1] : null;
+    }
+
+    // Create and embed the Tableau viz
+    function createTableauViz(siteID) {
+      try {
+        viz = new tableau.Viz(container, vizUrl, {
+          hideTabs: true,
+          width: '950px',
+          height: '150px',
+          onFirstInteractive: () => {
+            console.log('Tableau viz is interactive and ready.');
+            if (siteID) {
+              applyFilter(siteID);
+            }
+          },
+          onError: (error) => {
+            console.error('Error loading Tableau viz:', error);
+          }
+        });
+      } catch (error) {
+        console.error('Failed to create Tableau viz:', error);
+      }
+    }
+
+    // Apply filter on the embedded viz
+    async function applyFilter(siteID) {
+      if (!viz) {
+        console.warn('Viz not ready, cannot apply filter yet.');
+        return;
+      }
+
+      try {
+        const workbook = viz.getWorkbook();
+        const activeSheet = workbook.getActiveSheet();
+
+        let targetSheet;
+
+        if (activeSheet.getSheetType() === 'dashboard') {
+          const worksheets = activeSheet.getWorksheets();
+          targetSheet = worksheets.find(sheet => sheet.getName() === 'timeline');
+        } else {
+          targetSheet = activeSheet;
+        }
+
+        if (targetSheet) {
+          await targetSheet.applyFilterAsync('Site ID', siteID, tableau.FilterUpdateType.REPLACE);
+          console.log(`Filter applied: Site ID = ${siteID}`);
+        } else {
+          console.warn("Worksheet 'timeline' not found in dashboard.");
+        }
+      } catch (error) {
+        console.error('Error applying filter:', error);
+      }
+    }
+
+    // Listen for messages from parent (Wix site) to update filter dynamically
+    window.addEventListener('message', (event) => {
+      // TODO: Replace with your Wix domain for security!
+      const allowedOrigin = 'https://www.the-big-green-machine.com';
+
+      if (event.origin !== allowedOrigin) {
+        console.warn('Message from untrusted origin:', event.origin);
+        return;
+      }
+
+      const siteIDFromMessage = event.data;
+      if (siteIDFromMessage) {
+        if (viz) {
+          applyFilter(siteIDFromMessage);
+        } else {
+          console.warn('Viz not ready yet. Filter will be applied once viz is interactive.');
+        }
+      }
+    });
+
+    // On page load, create the viz and use siteID from URL
+    window.onload = () => {
+      const siteID = extractSiteIdFromUrl();
+      createTableauViz(siteID);
+    };
+  </script>
+</body>
+</html>
